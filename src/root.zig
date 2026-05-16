@@ -294,6 +294,13 @@ pub const MCTS = struct {
         leaf.backpropagate(outcome);
     }
 
+    pub fn doRoundsForDuration(self: *Self, allocator: mem.Allocator, random: std.Random, io: Io, duration: Io.Duration) !void {
+        const start = Io.Clock.awake.now(io);
+        while (start.untilNow(io, .awake).nanoseconds < duration.nanoseconds) {
+            try self.doRound(allocator, random);
+        }
+    }
+
     pub fn bestChild(self: *Self) ?*Node {
         if (self.root.children.items.len == 0) {
             return null;

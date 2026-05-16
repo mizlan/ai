@@ -27,9 +27,8 @@ pub fn main(init: std.process.Init) !void {
 
     var mcts = try zuttt.MCTS.init(arena);
     while (mcts.root.game.board.status() == .unfinished) {
-        for (1..1000) |_| {
-            try mcts.doRound(arena, random);
-        }
+        try mcts.doRoundsForDuration(arena, random, io, .fromMilliseconds(100));
+
         _ = mcts.commit(mcts.bestChild().?, arena);
         try stdout_writer.print("move {d}/{d} {f}", .{
             mcts.root.value,
