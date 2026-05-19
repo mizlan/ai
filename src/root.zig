@@ -53,13 +53,11 @@ const Board = struct {
     pub fn format(self: *const Self, writer: *Io.Writer) Io.Writer.Error!void {
         try writer.print(
             \\
-            \\===========
             \\ {s} ║ {s} ║ {s}
             \\═══╬═══╬═══
             \\ {s} ║ {s} ║ {s}
             \\═══╬═══╬═══
             \\ {s} ║ {s} ║ {s}
-            \\===========
             \\
         , .{
             cellMark(self.cells[0]), cellMark(self.cells[1]), cellMark(self.cells[2]),
@@ -126,10 +124,13 @@ const Game = struct {
             const nextState = next_states.items[moveIdx];
             state = nextState;
         }
+
+        // TODO is self here a bug
+        const playerWhoJustWent = 3 - self.playerToMove;
         return switch (state.board.status()) {
             .draw => .draw,
-            .player1_wins => if (self.playerToMove == 1) .win else .loss,
-            .player2_wins => if (self.playerToMove == 2) .win else .loss,
+            .player1_wins => if (playerWhoJustWent == 1) .win else .loss,
+            .player2_wins => if (playerWhoJustWent == 2) .win else .loss,
             .unfinished => unreachable,
         };
     }
@@ -190,14 +191,17 @@ pub const MCTS = struct {
             return self.children.items.len == 0;
         }
 
-        fn UCB1(self: *@This()) f64 {
+        fn UCB1(self: *@This()) f32 {
             if (self.visitCount == 0) {
-                return std.math.inf(f64);
+                return std.math.inf(f32);
             }
 
-            const q_value = (self.value / @as(f64, self.visitCount) + 1) / 2;
-            const N: f64 = self.parent.?.visitCount;
-            return q_value + std.math.sqrt1_2 * std.math.sqrt(@log(N) / self.visitCount);
+            const value: f32 = @floatFromInt(self.value);
+            const visits: f32 = @floatFromInt(self.visitCount);
+
+            const q_value = (value / visits + 1.0) / 2.0;
+            const N: f32 = @floatFromInt(self.parent.?.visitCount);
+            return q_value + std.math.sqrt1_2 * std.math.sqrt(@log(N) / visits);
         }
 
         pub fn select(self: *@This()) *Node {
@@ -205,7 +209,7 @@ pub const MCTS = struct {
                 return self;
             }
 
-            var bestScore = -std.math.inf(f64);
+            var bestScore = -std.math.inf(f32);
             var bestCandidate = self.children.items[0];
             for (self.children.items) |candidate| {
                 const score = candidate.UCB1();
@@ -264,8 +268,8 @@ pub const MCTS = struct {
             // state
             const value: i8 = switch (outcome) {
                 .draw => 0,
-                .win => -1,
-                .loss => 1,
+                .win => 1,
+                .loss => -1,
             };
 
             self.backpropagateValue(value);
@@ -294,11 +298,20 @@ pub const MCTS = struct {
         leaf.backpropagate(outcome);
     }
 
-    pub fn doRoundsForDuration(self: *Self, allocator: mem.Allocator, random: std.Random, io: Io, duration: Io.Duration) !void {
+    pub fn doRoundsForDuration(
+        self: *Self,
+        allocator: mem.Allocator,
+        random: std.Random,
+        io: Io,
+        duration: Io.Duration,
+    ) !i32 {
         const start = Io.Clock.awake.now(io);
+        var numRounds: i32 = 0;
         while (start.untilNow(io, .awake).nanoseconds < duration.nanoseconds) {
             try self.doRound(allocator, random);
+            numRounds += 1;
         }
+        return numRounds;
     }
 
     pub fn bestChild(self: *Self) ?*Node {

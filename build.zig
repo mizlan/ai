@@ -41,6 +41,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
+    const c4mod = b.addModule("connect4", .{
+        .root_source_file = b.path("src/connect4.zig"),
+        .target = target,
+    });
+
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
     // to the module defined above, it's sometimes preferable to split business
@@ -79,6 +84,7 @@ pub fn build(b: *std.Build) void {
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
                 .{ .name = "zuttt", .module = mod },
+                .{ .name = "connect4", .module = c4mod },
             },
         }),
     });
@@ -122,8 +128,14 @@ pub fn build(b: *std.Build) void {
         .root_module = mod,
     });
 
+    const c4mod_tests = b.addTest(.{
+        .root_module = c4mod,
+    });
+
     // A run step that will run the test executable.
     const run_mod_tests = b.addRunArtifact(mod_tests);
+
+    const run_c4mod_tests = b.addRunArtifact(c4mod_tests);
 
     // Creates an executable that will run `test` blocks from the executable's
     // root module. Note that test executables only test one module at a time,
@@ -141,6 +153,7 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
+    test_step.dependOn(&run_c4mod_tests.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //
