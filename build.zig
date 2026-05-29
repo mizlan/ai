@@ -46,6 +46,13 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
+    const color_mod = b.addModule("color", .{
+        .root_source_file = b.path("src/color.zig"),
+        .target = target,
+    });
+
+    c4mod.addImport("color", color_mod);
+
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
     // to the module defined above, it's sometimes preferable to split business
@@ -85,6 +92,7 @@ pub fn build(b: *std.Build) void {
                 // importing modules from different packages).
                 .{ .name = "zuttt", .module = mod },
                 .{ .name = "connect4", .module = c4mod },
+                .{ .name = "color", .module = color_mod },
             },
         }),
     });
@@ -132,10 +140,16 @@ pub fn build(b: *std.Build) void {
         .root_module = c4mod,
     });
 
+    const color_mod_tests = b.addTest(.{
+        .root_module = color_mod,
+    });
+
     // A run step that will run the test executable.
     const run_mod_tests = b.addRunArtifact(mod_tests);
 
     const run_c4mod_tests = b.addRunArtifact(c4mod_tests);
+
+    const run_color_mod_tests = b.addRunArtifact(color_mod_tests);
 
     // Creates an executable that will run `test` blocks from the executable's
     // root module. Note that test executables only test one module at a time,
@@ -154,6 +168,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
     test_step.dependOn(&run_c4mod_tests.step);
+    test_step.dependOn(&run_color_mod_tests.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //
